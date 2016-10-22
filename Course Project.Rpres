@@ -1,0 +1,133 @@
+The Diamond Price Estimator
+========================================================
+author: Chris
+date: 10/21/2016
+autosize: false
+
+<style>
+
+/* slide titles */
+
+.reveal h3 { 
+  font-size: 40px;
+}
+
+.reveal h4 { 
+  font-size: 30px;
+}
+
+.reveal h5 { 
+  font-size: 20px;
+}
+
+.reveal section p {
+  font-size: 20px;
+}
+
+/* ordered and unordered list styles */
+.reveal ul, 
+.reveal ol {
+    font-size: 20px;
+    list-style-type: square;
+}
+
+</style>
+
+
+The Diamond Price Estimator uses data on over 50,000 diamonds to estimate prices
+========================================================
+
+```{r,echo=FALSE}
+library(ggplot2)
+library(grid)
+library(gridExtra)
+library(caret)
+diamonds_subset<-diamonds[,c(1:4,7)]
+diamonds_subset$cut<-factor(diamonds_subset$cut,ordered=FALSE)
+diamonds_subset$color<-factor(diamonds_subset$color,ordered=FALSE)
+diamonds_subset$clarity<-factor(diamonds_subset$clarity,ordered=FALSE)
+ggplot(data=diamonds_subset,aes(x=carat,y=price))+geom_point()
+```
+
+***
+
+This dataset contains the prices and other attributes of 53,940 diamonds, with the following variables:
+
+- price: price in US dollars (\$326-\$18,823)
+- carat: weight of the diamond (0.2-5.01)
+- cut: quality of the cut (Fair, Good, Very Good, Premium, Ideal)
+- color: diamond colour, from J (worst) to D (best)
+- clarity: a measurement of how clear the diamond is (I1 (worst), SI1, SI2, VS1, VS2, VVS1, VVS2, IF (best))
+- x,y,z: length, wdith, depth in mm (unused)
+- depth: total depth percentage (unused)
+- table:  width of top of diamond relative to widest point (unused)
+
+We use advanced multivariate regression techniques to model the relationship between carat weight and price
+========================================================
+
+```{r,echo=FALSE}
+ggplot(data=diamonds_subset[which(diamonds_subset$clarity=="SI2"),],aes(x=carat,y=price))+geom_point(color=5)+facet_grid(color~cut)+ggtitle("Clarity = SI2")
+```
+***
+```{r,echo=FALSE}
+ggplot(data=diamonds_subset[which(diamonds_subset$clarity=="VVS1"),],aes(x=carat,y=price))+geom_point(color=6)+facet_grid(color~cut)+ggtitle("Clarity = VVS1")
+```
+
+
+The Estimator generates price estimates using 3 different models
+========================================================
+
+```{r,echo=FALSE}
+library(ggplot2)
+library(grid)
+library(gridExtra)
+library(caret)
+diamonds_subset<-diamonds[,c(1:4,7)]
+diamonds_subset$cut<-factor(diamonds_subset$cut,ordered=FALSE)
+diamonds_subset$color<-factor(diamonds_subset$color,ordered=FALSE)
+diamonds_subset$clarity<-factor(diamonds_subset$clarity,ordered=FALSE)
+
+fit1<-lm(price~carat+cut+color+clarity,data=diamonds_subset)
+pred1<-predict(fit1,diamonds_subset)
+    
+fit2<-lm(price~carat*cut+carat*color+carat*clarity,data=diamonds_subset)
+pred2<-predict(fit2,diamonds_subset)
+
+fit3<-lm(price~carat*(cut+color+clarity)+I(carat^2)*(cut+color+clarity)+carat:cut:color:clarity+I(carat^2):cut:color:clarity,data=diamonds_subset)
+pred3<-predict(fit3,diamonds_subset)
+diamonds_out<-cbind(diamonds_subset,pred1,pred2,pred3)
+
+caratInput<-1
+cutInput<-"Very Good"
+colorInput<-"G"
+clarityInput<-"VS1"
+
+model1pred <- predict(fit1, newdata = data.frame(carat=caratInput,cut=cutInput,color=colorInput,clarity=clarityInput))
+model2pred <- predict(fit2, newdata = data.frame(carat=caratInput,cut=cutInput,color=colorInput,clarity=clarityInput))
+model3pred <- predict(fit3, newdata = data.frame(carat=caratInput,cut=cutInput,color=colorInput,clarity=clarityInput))
+
+a<-ggplot(data=diamonds_out[which(diamonds_out$cut==cutInput&diamonds_out$color==colorInput&diamonds_out$clarity==clarityInput),],aes(x=carat,y=price))+geom_point()+geom_line(aes(y=pred1),color=5,size=1.5)+geom_point(aes(x=caratInput,y=model1pred),color="red",size=5)+ggtitle("Model 1")
+b<-ggplot(data=diamonds_out[which(diamonds_out$cut==cutInput&diamonds_out$color==colorInput&diamonds_out$clarity==clarityInput),],aes(x=carat,y=price))+geom_point()+geom_line(aes(y=pred2),color=6,size=1.5)+geom_point(aes(x=caratInput,y=model2pred),color="red",size=5)+ggtitle("Model 2")
+c<-ggplot(data=diamonds_out[which(diamonds_out$cut==cutInput&diamonds_out$color==colorInput&diamonds_out$clarity==clarityInput),],aes(x=carat,y=price))+geom_point()+geom_line(aes(y=pred3),color=7,size=1.5)+geom_point(aes(x=caratInput,y=model3pred),color="red",size=5)+ggtitle("Model 3")
+grid.arrange(a,b,c,ncol=3,top=textGrob(paste("Diamond Prices: Cut =",cutInput,", Color =",colorInput,", Clarity =",clarityInput),gp=gpar(fontsize=15,font=3)))
+```
+
+***
+
+- **Model 1** is a simple linear model of the form price~carat+cut+color+clarity.
+- **Model 2** is a linear model with interaction terms allowing different relationships between carat and price for each level of cut, color, and clarity.
+- **Model 3** uses square terms to capture the nonlinear relationship between carat weight and price.
+
+
+Data used in the Diamond Price Estimator are from the diamonds dataset in the ggplot2 library
+========================================================
+
+The data are from the diamonds dataset available in the ggplot2 library, described in more detail at: http://docs.ggplot2.org/0.9.3.1/diamonds.html
+
+Prices of 50,000 round cut diamonds
+
+Description:  A dataset containing the prices and other attributes of almost 54,000 diamonds.
+
+Usage:  diamonds
+
+Format:  A data frame with 53940 rows and 10 variables
